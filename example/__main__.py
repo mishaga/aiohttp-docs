@@ -7,9 +7,9 @@ from typing import Literal
 from aiohttp import web
 from pydantic import BaseModel
 
-from aiohttp_docs import docs
+from aiohttp_docs import docs, OpenapiJsonSpec, OpenapiYamlSpec, ResponseData
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('example')
 
 
@@ -18,6 +18,7 @@ class PathResponse(BaseModel):
 
     okay: Literal[True]
     path: str
+    fake: Literal['yes', 'no'] = 'no'
 
 
 class ErrorResponse(BaseModel):
@@ -28,11 +29,11 @@ class ErrorResponse(BaseModel):
 
 
 @docs(
-    tags=['Index'],
+    # tags=['Index'],
     response_models={
-        HTTPStatus.OK: PathResponse,
-        HTTPStatus.BAD_REQUEST: ErrorResponse,
-        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+        HTTPStatus.OK: ResponseData(model=PathResponse),
+        400: ResponseData(model=ErrorResponse),
+        401: ErrorResponse,
     },
 )
 async def func_page(request: web.Request) -> web.Response:
@@ -44,15 +45,26 @@ class ClassPage(web.View):
     """Class page view."""
 
     @docs(
-        tags=['MIndex'],
+        # tags=['Index'],
         response_models={
-            HTTPStatus.OK: PathResponse,
-            HTTPStatus.BAD_REQUEST: ErrorResponse,
+            HTTPStatus.OK: ResponseData(model=PathResponse),
+            HTTPStatus.BAD_REQUEST: ResponseData(model=ErrorResponse),
         },
     )
     async def get(self) -> web.Response:
         """Class method."""
-        return web.json_response({'okay': True, 'path': self.request.path})
+        return web.json_response({'okay': True, 'path': self.request.path, 'method': 'GET'})
+
+    @docs(
+        # tags=['Index'],
+        response_models={
+            HTTPStatus.OK: ResponseData(model=PathResponse, description='Info about...'),
+            HTTPStatus.BAD_REQUEST: ErrorResponse,
+        },
+    )
+    async def post(self) -> web.Response:
+        """Class method."""
+        return web.json_response({'okay': True, 'path': self.request.path, 'method': 'POST'})
 
 
 def create_app() -> web.Application:
@@ -67,12 +79,24 @@ def create_app() -> web.Application:
     return app
 
 
+def setup_docs(app: web.Application) -> None:
+    """Add docs to a web app."""
+    app.add_routes(
+        [
+            web.view('/openapi.json', OpenapiJsonSpec),
+            web.view('/openapi.yaml', OpenapiYamlSpec),
+        ],
+    )
+
+
 def main() -> None:
     """Main."""
-    logger.info(getattr(func_page, '_openapi_docs', None))
-    logger.info(getattr(ClassPage.get, '_openapi_docs', None))
+    # print(PathResponse.model_json_schema())
+    # logger.info(getattr(func_page, '_openapi_docs', None))
+    # logger.info(getattr(ClassPage.get, '_openapi_docs', None))
 
     app = create_app()
+    setup_docs(app=app)
     web.run_app(app=app)
 
 
