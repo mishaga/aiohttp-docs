@@ -4,7 +4,7 @@ from http import HTTPMethod, HTTPStatus
 
 from aiohttp import web
 from aiohttp.typedefs import Handler
-from aiohttp.web_urldispatcher import ResourceRoute
+from aiohttp.web_urldispatcher import AbstractRoute
 from pydantic import BaseModel
 
 from ._constants import DOCS_ATTR_NAME, OPENAPI_SPEC_VERSION
@@ -21,11 +21,8 @@ def build_openapi_spec(
     """Build OpenAPI 3.1 specification from application routes."""
     paths: dict[str, PathItem] = {}
 
-    for route in app.router.routes():  # ... extract to a func
+    for route in app.router.routes():
         for path, method, operation in extract_route_info(route):
-            if not operation:
-                continue
-
             if path not in paths:
                 paths[path] = PathItem()
             paths[path][method] = operation
@@ -37,7 +34,7 @@ def build_openapi_spec(
     )
 
 
-def extract_route_info(route: ResourceRoute) -> Generator[tuple[str, str, Operation]]:
+def extract_route_info(route: AbstractRoute) -> Generator[tuple[str, str, Operation]]:
     if inspect.isfunction(route.handler) and hasattr(route.handler, DOCS_ATTR_NAME):
         path = route.resource.canonical
         method = route.method.lower()
