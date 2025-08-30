@@ -5,7 +5,9 @@ https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md
 https://editor-next.swagger.io
 """
 
-from typing import Literal, Required, TypedDict
+from typing import Any, Literal, Required, TypedDict
+
+from ._enums import ParameterType
 
 
 class Licence(TypedDict, total=False):
@@ -30,29 +32,39 @@ class Info(TypedDict, total=False):
     version: Required[str]
 
 
-class Operation(TypedDict, total=False):
-    tags: list[str]
+class Example(TypedDict, total=False):
     summary: str
     description: str
+    value: Any
+    externalValue: Any
 
 
-Parameters = TypedDict(
-    'Parameters',
+Parameter = TypedDict(
+    'Parameter',
     {
         'name': Required[str],
-        'in': Required[Literal['query', 'header', 'path', 'cookie']],
+        'in': Required[ParameterType],
         'description': str,
         'required': Required[bool],
         'deprecated': bool,
-        'allowEmptyValue': bool,
+        'examples': dict[str, Example],
+        'schema': dict,
     },
     total=False,
 )
 
 
-class PathItem(TypedDict, total=False):
+class Operation(TypedDict, total=False):
+    tags: list[str]
     summary: str
     description: str
+    deprecated: bool
+    parameters: list[Parameter]
+    requestBody: dict
+    responses: dict[str, dict]
+
+
+class PathItem(TypedDict, total=False):
     get: Operation
     put: Operation
     post: Operation
@@ -61,10 +73,9 @@ class PathItem(TypedDict, total=False):
     head: Operation
     patch: Operation
     trace: Operation
-    parameters: Parameters
 
 
 class OpenApiSpecification(TypedDict):
-    openapi: Literal['3.1.0']
+    openapi: Literal['3.1.1']
     info: Info
     paths: dict[str, PathItem]

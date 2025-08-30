@@ -16,5 +16,8 @@ class ApiEndpoint(TypedDict, total=False):
     summary: str
     description: str
     body_model: type[BaseModel]
+    path_model: type[BaseModel]
     query_model: type[BaseModel]
+    header_model: type[BaseModel]
+    cookie_model: type[BaseModel]
     response_models: Responses
