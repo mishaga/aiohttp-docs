@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 
 from aiohttp_docs import SWAGGER_UI_DIR_PATH
-from tools.update_swagger_ui._archive import copy_dist_files, download_file, unpack_archive
+from tools.update_swagger_ui._archive import download_file, unpack_dist_folder
 from tools.update_swagger_ui._constants import SWAGGER_UI_REPO
 from tools.update_swagger_ui._directory import prepare_swagger_ui_directory
 from tools.update_swagger_ui._update_files import update_current_version, update_index_html, update_readme
@@ -41,25 +41,23 @@ def download_and_update_swagger_ui(version: str) -> None:
         temp_path = Path(temp_dir)
         tar_path = temp_path / f'{version}.tar.gz'
 
-        # Download archive
-        archive_url = f'https://github.com/{SWAGGER_UI_REPO}/archive/{version}.tar.gz'
-        logger.info('Downloading archive from %s', archive_url)
-        download_file(archive_url, tar_path)
+        # download archive
+        download_file(
+            url=f'https://github.com/{SWAGGER_UI_REPO}/archive/{version}.tar.gz',
+            target_path=tar_path,
+        )
 
-        # Extract archive
-        logger.info('Extracting %s', tar_path)
-        swagger_ui_dir = unpack_archive(tar_path, temp_path)
+        # ensure destination folder exists and is empty
+        prepare_swagger_ui_directory(path=SWAGGER_UI_DIR_PATH)
 
-        # Ensure clean destination directory
-        prepare_swagger_ui_directory(SWAGGER_UI_DIR_PATH)
+        # extract archive
+        unpack_dist_folder(
+            tar_path=tar_path,
+            target_dir=SWAGGER_UI_DIR_PATH,
+        )
 
-        # Copy distribution files
-        copy_dist_files(swagger_ui_dir / 'dist', SWAGGER_UI_DIR_PATH)
-
-        # Update index.html
+        # update index.html and version references
         update_index_html(SWAGGER_UI_DIR_PATH / 'index.html')
-
-        # Update version references
         update_current_version(version)
         update_readme(version)
 
@@ -67,7 +65,7 @@ def download_and_update_swagger_ui(version: str) -> None:
 
 
 def run() -> None:
-    """Main file logic."""
+    """Compare current and GitHub versions of Swagger UI, update if needed."""
     # Get current and latest versions
     current_version = get_current_version()
     logger.info('Current Swagger UI version: %s', current_version)

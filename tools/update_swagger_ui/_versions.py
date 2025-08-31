@@ -30,18 +30,15 @@ def get_latest_version() -> str:
         str: The latest Swagger UI version
     """
     try:
-        return _detect_latest_release(SWAGGER_UI_REPO)
+        return _detect_latest_release()
     except (requests.RequestException, json.JSONDecodeError, KeyError) as e:
         logger.exception('Failed to fetch latest release')
         msg = f'Could not determine latest version: {e}'
         raise ValueError(msg) from e
 
 
-def _detect_latest_release(repo: str) -> str:
+def _detect_latest_release() -> str:
     """Get the latest version of a GitHub repository using the GitHub API.
-
-    Args:
-        repo (str): GitHub repository in the format 'owner/repo'
 
     Returns:
         str: The latest version tag
@@ -49,7 +46,7 @@ def _detect_latest_release(repo: str) -> str:
     Raises:
         ValueError: If unable to get the latest version
     """
-    url = f'https://api.github.com/repos/{repo}/releases/latest'
+    url = f'https://api.github.com/repos/{SWAGGER_UI_REPO}/releases/latest'
     logger.info('Checking latest release from %s', url)
 
     resp = requests.get(url, timeout=GITHUB_API_TIMEOUT)
