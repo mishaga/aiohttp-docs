@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from ._constants import DOCS_ATTR_NAME, OPENAPI_SPEC_VERSION
 from ._doc_models import ApiEndpoint, Response, Responses
 from ._enums import ParameterType
-from ._spec_helpers import HandlerInfo
+from ._spec_helpers import HandlerInfo, get_base_model_from_annotation
 from ._spec_models import Info, OpenApiSpecification, Operation, Parameter, PathItem
 
 
@@ -60,10 +60,9 @@ def extract_route_info(route: AbstractRoute) -> Generator[HandlerInfo]:
                 )
 
 
-def extract_operation(handler: Handler) -> Operation:
+def extract_operation(handler: Handler) -> Operation:  # noqa: C901 too complex
     """Extract OpenAPI path information from a documented route."""
     docs_data: ApiEndpoint = getattr(handler, DOCS_ATTR_NAME)
-    docstring = inspect.getdoc(handler)
     parameters = get_parameters(docs_data=docs_data)
 
     operation: Operation = {}
@@ -76,8 +75,10 @@ def extract_operation(handler: Handler) -> Operation:
 
     if 'description' in docs_data:
         operation['description'] = docs_data['description']
-    elif docstring:
-        operation['description'] = docstring
+    else:
+        docstring = inspect.getdoc(handler)
+        if docstring:
+            operation['description'] = docstring
 
     if 'deprecated' in docs_data:
         operation['deprecated'] = docs_data['deprecated']
@@ -88,7 +89,20 @@ def extract_operation(handler: Handler) -> Operation:
         operation['parameters'] = parameters
 
     if 'body_model' in docs_data:
-        operation['requestBody'] = get_request_body(docs_data['body_model'])
+        operation['requestBody'] = get_request_body(
+            model_class=docs_data['body_model'],
+            required=True,
+        )
+    else:
+        sig = inspect.signature(handler)
+        param = sig.parameters.get('request_body', None)
+        param_annotation = param.annotation if param else None
+        base_model = get_base_model_from_annotation(param_annotation)
+        if param and param_annotation and base_model:
+            operation['requestBody'] = get_request_body(
+                model_class=base_model,
+                required=param.default == inspect.Parameter.empty,
+            )
 
     if 'response_models' in docs_data:
         operation['responses'] = get_responses(docs_data['response_models'])
@@ -118,9 +132,13 @@ def get_responses(response_models: Responses) -> dict[str, dict]:
     return responses
 
 
-def get_request_body(model_class: type[BaseModel]) -> dict:
+def get_request_body(
+    model_class: type[BaseModel],
+    *,
+    required: bool,
+) -> dict:
     return {
-        'required': True,
+        'required': required,
         'content': {
             'application/json': {
                 'schema': model_class.model_json_schema(),

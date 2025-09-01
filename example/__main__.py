@@ -20,6 +20,7 @@ class PathResponse(BaseModel):
     path: str
     method: str
     fake: Literal['yes', 'no'] = 'no'
+    param: str | None = None
 
 
 class PathModel(BaseModel):
@@ -179,13 +180,13 @@ class ClassPage(web.View):
             403: ErrorResponse,
         },
         summary='Well well well...',
-        body_model=BodyModel,
     )
-    async def post(self) -> web.Response:
+    async def post(self, request_body: PathModel | None = None) -> web.Response:
         """Class POST method."""
         resp = PathResponse(
             path=self.request.path,
             method=self.request.method,
+            param=str(request_body),
         )
         return web.json_response(resp.model_dump())
 
