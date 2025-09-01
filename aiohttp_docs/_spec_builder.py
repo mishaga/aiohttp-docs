@@ -79,6 +79,11 @@ def extract_operation(handler: Handler) -> Operation:
     elif docstring:
         operation['description'] = docstring
 
+    if 'deprecated' in docs_data:
+        operation['deprecated'] = docs_data['deprecated']
+    elif hasattr(handler, '__deprecated__'):
+        operation['deprecated'] = True
+
     if parameters:
         operation['parameters'] = parameters
 

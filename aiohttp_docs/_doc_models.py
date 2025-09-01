@@ -15,6 +15,7 @@ class ApiEndpoint(TypedDict, total=False):
     tags: list[str]
     summary: str
     description: str
+    deprecated: bool
     body_model: type[BaseModel]
     path_model: type[BaseModel]
     query_model: type[BaseModel]

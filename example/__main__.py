@@ -64,7 +64,6 @@ class CookieModel(BaseModel):
 
     first_name: str
     last_name: str
-    path: PathModel
 
 
 class BodyModel(BaseModel):
@@ -154,6 +153,7 @@ class ClassPage(web.View):
             HTTPStatus.BAD_REQUEST: Response(model=ErrorResponse),
         },
         description='My fancy description',
+        deprecated=True,
     )
     async def get(self) -> web.Response:
         """Class GET method."""
