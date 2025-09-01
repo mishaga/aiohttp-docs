@@ -211,9 +211,9 @@ def main() -> None:
         app,
         info=Info(
             title='Test API of mine',
-            version='1.0.2',
-            summary='Summary',
-            description='Description',
+            version='1.2.0',
+            summary='My fancy `Summary`',
+            description='My incredible `Description`',
             termsOfService='/terms',
         ),
         spec_path='/api/openapi.json',

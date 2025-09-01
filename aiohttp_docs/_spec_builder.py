@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from ._constants import DOCS_ATTR_NAME, OPENAPI_SPEC_VERSION
 from ._doc_models import ApiEndpoint, Response, Responses
 from ._enums import ParameterType
+from ._spec_helpers import HandlerInfo
 from ._spec_models import Info, OpenApiSpecification, Operation, Parameter, PathItem
 
 
@@ -22,10 +23,10 @@ def build_openapi_spec(
     paths: dict[str, PathItem] = {}
 
     for route in app.router.routes():
-        for path, method, operation in extract_route_info(route):
-            if path not in paths:
-                paths[path] = PathItem()
-            paths[path][method] = operation
+        for handler in extract_route_info(route):
+            if handler.path not in paths:
+                paths[handler.path] = PathItem()
+            paths[handler.path][handler.method.lower()] = handler.operation
 
     return OpenApiSpecification(
         openapi=OPENAPI_SPEC_VERSION,
@@ -34,21 +35,29 @@ def build_openapi_spec(
     )
 
 
-def extract_route_info(route: AbstractRoute) -> Generator[tuple[str, str, Operation]]:
+def extract_route_info(route: AbstractRoute) -> Generator[HandlerInfo]:
     if inspect.isfunction(route.handler) and hasattr(route.handler, DOCS_ATTR_NAME):
+        method = HTTPMethod(route.method)
         path = route.resource.canonical
-        method = route.method.lower()
         operation = extract_operation(route.handler)
-        yield path, method, operation
+        yield HandlerInfo(
+            method=method,
+            path=path,
+            operation=operation,
+        )
 
     elif inspect.isclass(route.handler):
-        for method in HTTPMethod:
-            method = method.lower()  # noqa: PLW2901
-            handler = getattr(route.handler, method, None)
+        for m in HTTPMethod:
+            method = HTTPMethod(m)
+            handler = getattr(route.handler, method.lower(), None)
             if handler and hasattr(handler, DOCS_ATTR_NAME):
-                operation = extract_operation(handler)
                 path = route.resource.canonical
-                yield path, method, operation
+                operation = extract_operation(handler)
+                yield HandlerInfo(
+                    method=method,
+                    path=path,
+                    operation=operation,
+                )
 
 
 def extract_operation(handler: Handler) -> Operation:
