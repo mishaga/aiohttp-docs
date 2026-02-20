@@ -5,7 +5,7 @@ https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md
 https://editor-next.swagger.io
 """
 
-from typing import Any, Literal, Required, TypedDict
+from typing import Any, Required, TypedDict
 
 from ._enums import ParameterType
 
@@ -76,6 +76,6 @@ class PathItem(TypedDict, total=False):
 
 
 class OpenApiSpecification(TypedDict):
-    openapi: Literal['3.1.1']
+    openapi: str
     info: Info
     paths: dict[str, PathItem]

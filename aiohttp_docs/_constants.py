@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Final, Literal
+from typing import Final
 
-OPENAPI_SPEC_VERSION: Literal['3.1.1'] = '3.1.1'
+OPENAPI_SPEC_VERSION: Final[str] = '3.1.2'
 
 DOCS_ATTR_NAME: Final[str] = '_openapi_docs'
 

@@ -1,7 +1,6 @@
 import inspect
 from collections.abc import Generator
 from http import HTTPMethod, HTTPStatus
-from inspect import isclass
 
 from aiohttp import web
 from aiohttp.typedefs import Handler
@@ -11,7 +10,7 @@ from pydantic import BaseModel
 from ._constants import DOCS_ATTR_NAME, OPENAPI_SPEC_VERSION
 from ._doc_models import ApiEndpoint, Response, Responses
 from ._enums import ParameterType
-from ._spec_helpers import HandlerInfo, get_base_model_from_annotation
+from ._inner_models import RouteInfo
 from ._spec_models import Info, OpenApiSpecification, Operation, Parameter, PathItem
 
 
@@ -36,12 +35,12 @@ def build_openapi_spec(
     )
 
 
-def extract_route_info(route: AbstractRoute) -> Generator[HandlerInfo]:
+def extract_route_info(route: AbstractRoute) -> Generator[RouteInfo]:
     if inspect.isfunction(route.handler) and hasattr(route.handler, DOCS_ATTR_NAME):
         method = HTTPMethod(route.method)
         path = route.resource.canonical
         operation = extract_operation(route.handler)
-        yield HandlerInfo(
+        yield RouteInfo(
             method=method,
             path=path,
             operation=operation,
@@ -54,14 +53,14 @@ def extract_route_info(route: AbstractRoute) -> Generator[HandlerInfo]:
             if handler and hasattr(handler, DOCS_ATTR_NAME):
                 path = route.resource.canonical
                 operation = extract_operation(handler)
-                yield HandlerInfo(
+                yield RouteInfo(
                     method=method,
                     path=path,
                     operation=operation,
                 )
 
 
-def extract_operation(handler: Handler) -> Operation:  # noqa: C901 too complex
+def extract_operation(handler: Handler) -> Operation:
     """Extract OpenAPI path information from a documented route."""
     docs_data: ApiEndpoint = getattr(handler, DOCS_ATTR_NAME)
     parameters = get_parameters(docs_data=docs_data)
@@ -94,16 +93,6 @@ def extract_operation(handler: Handler) -> Operation:  # noqa: C901 too complex
             model_class=docs_data['body_model'],
             required=True,
         )
-    else:
-        sig = inspect.signature(handler)
-        param = sig.parameters.get('request_body', None)
-        param_annotation = param.annotation if param else None
-        base_model = get_base_model_from_annotation(param_annotation) if param_annotation else None
-        if param and param_annotation and base_model:
-            operation['requestBody'] = get_request_body(
-                model_class=base_model,
-                required=param.default == inspect.Parameter.empty,
-            )
 
     if docs_data.get('response_models'):
         operation['responses'] = get_responses(docs_data['response_models'])
@@ -118,7 +107,7 @@ def get_responses(response_models: Responses) -> dict[str, dict]:
         if not isinstance(status_code, HTTPStatus):
             status_code = HTTPStatus(status_code)  # noqa: PLW2901
 
-        if isclass(response_data) and issubclass(response_data, BaseModel):
+        if inspect.isclass(response_data) and issubclass(response_data, BaseModel):
             response_data = Response(model=response_data)  # noqa: PLW2901
 
         responses[status_code.value] = {
