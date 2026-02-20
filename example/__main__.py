@@ -93,6 +93,7 @@ async def terms_view(_: web.Request) -> web.Response:
     tags=['Index'],
     response_models={
         HTTPStatus.OK: Response(model=PathResponse),
+        HTTPStatus.CREATED: PathResponse,
         400: Response(model=ErrorResponse),
         401: ErrorResponse,
     },

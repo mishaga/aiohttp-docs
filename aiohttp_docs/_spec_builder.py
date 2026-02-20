@@ -1,6 +1,7 @@
 import inspect
 from collections.abc import Generator
 from http import HTTPMethod, HTTPStatus
+from inspect import isclass
 
 from aiohttp import web
 from aiohttp.typedefs import Handler
@@ -97,14 +98,14 @@ def extract_operation(handler: Handler) -> Operation:  # noqa: C901 too complex
         sig = inspect.signature(handler)
         param = sig.parameters.get('request_body', None)
         param_annotation = param.annotation if param else None
-        base_model = get_base_model_from_annotation(param_annotation)
+        base_model = get_base_model_from_annotation(param_annotation) if param_annotation else None
         if param and param_annotation and base_model:
             operation['requestBody'] = get_request_body(
                 model_class=base_model,
                 required=param.default == inspect.Parameter.empty,
             )
 
-    if 'response_models' in docs_data:
+    if docs_data.get('response_models'):
         operation['responses'] = get_responses(docs_data['response_models'])
 
     return operation
@@ -117,7 +118,7 @@ def get_responses(response_models: Responses) -> dict[str, dict]:
         if not isinstance(status_code, HTTPStatus):
             status_code = HTTPStatus(status_code)  # noqa: PLW2901
 
-        if issubclass(response_data, BaseModel):
+        if isclass(response_data) and issubclass(response_data, BaseModel):
             response_data = Response(model=response_data)  # noqa: PLW2901
 
         responses[status_code.value] = {
