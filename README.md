@@ -211,6 +211,10 @@ from pydantic import BaseModel
 from aiohttp_docs import Info, Response, docs, setup_docs
 
 
+class Item(BaseModel):
+    id: int
+
+
 class ItemResponse(BaseModel):
     id: int
     title: str
@@ -224,22 +228,37 @@ class ItemView(web.View):
     @docs(
         tags=['Items'],
         summary='Get item by ID',
+        path_model=Item,
         response_models={HTTPStatus.OK: ItemResponse},
     )
     async def get(self) -> web.Response:
-        return web.json_response({'id': 1, 'title': 'Thing'})
+        item_id = int(self.request.match_info['id'])
+        return web.json_response({'id': item_id, 'title': 'Thing'})
 
     @docs(
         tags=['Items'],
         summary='Update item',
+        path_model=Item,
         body_model=ItemBody,
         response_models={
-            HTTPStatus.OK: Response(model=ItemResponse, description='Updated item'),
+            HTTPStatus.OK: Response(model=ItemResponse, description='Item updated'),
         },
     )
     async def put(self) -> web.Response:
+        item_id = int(self.request.match_info['id'])
         body = ItemBody.model_validate_json(await self.request.content.read())
-        return web.json_response({'id': 1, 'title': body.title})
+        return web.json_response({'id': item_id, 'title': body.title})
+
+    @docs(
+        tags=['Items'],
+        summary='Delete item',
+        path_model=Item,
+        response_models={
+            HTTPStatus.NO_CONTENT: Response(model=None, description='Item deleted'),
+        },
+    )
+    async def delete(self) -> web.Response:
+        return web.json_response(status=HTTPStatus.NO_CONTENT)
 
 
 def main() -> None:
@@ -259,22 +278,35 @@ if __name__ == '__main__':
 Mark an endpoint as deprecated explicitly via the decorator or by using the standard `@deprecated` decorator from `warnings`.
 
 ```python
+from http import HTTPStatus
 from warnings import deprecated
 
 from aiohttp import web
+from pydantic import BaseModel
 
 from aiohttp_docs import Info, docs, setup_docs
 
 
-@docs(tags=['Legacy'], deprecated=True)
+class LegacyResponse(BaseModel):
+    status: str
+
+
+@docs(
+    tags=['Legacy'],
+    deprecated=True,  # this will mark the API method as deprecated only for the documentation
+    response_models={HTTPStatus.OK: LegacyResponse},
+)
 async def old_endpoint(_: web.Request) -> web.Response:
     return web.json_response({'status': 'old'})
 
 
-@deprecated('Use /v2/resource instead')
-@docs(tags=['Legacy'])
+@deprecated('Use /v2/resource instead')  # this will mark the function as deprecated, and it will be reflected in the documentation too
+@docs(
+    tags=['Legacy'],
+    response_models={HTTPStatus.OK: LegacyResponse},
+)
 async def another_old_endpoint(_: web.Request) -> web.Response:
-    return web.json_response({'status': 'old'})
+    return web.json_response({'status': 'very old'})
 
 
 def main() -> None:
@@ -282,7 +314,7 @@ def main() -> None:
     app.add_routes(
         [
             web.get('/one', old_endpoint, allow_head=False),
-            web.get('/two', old_endpoint, allow_head=False),
+            web.get('/two', another_old_endpoint, allow_head=False),
         ],
     )
     setup_docs(app, info=Info(title='My API', version='0.1.0'))
@@ -308,9 +340,11 @@ from aiohttp_docs import Info, setup_docs
 def main():
     app = web.Application()
 
+    # disable docs for production
+    # `/api/openapi.json`, `/api/doc` and `/static/swagger` will return 404 Not Found
     setup_docs(
         app,
-        info=Info(title='My API', version='1.0.0'),
+        info=Info(title='My API', version='0.1.0'),
         enabled=os.getenv('ENVIRONMENT', '') != 'PRODUCTION',
     )
 
@@ -325,6 +359,7 @@ if __name__ == '__main__':
 ## Plans
 
 - Nested models, root models
-- Move from TypedDict to pydantic models
+- Links in responses
+- Move from TypedDict to pydantic models (because of "termsOfService", for instance)
 - Authorization
 - Automatic validation of the body, response, query, path etc (based on annotations)
