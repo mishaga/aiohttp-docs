@@ -8,17 +8,23 @@ This script:
 5. Updates version information in the README and VERSION file
 """
 
+import asyncio
 import logging
 import sys
 import tempfile
 from pathlib import Path
 
-from aiohttp_docs import SWAGGER_UI_DIR_PATH
-from tools.update_swagger_ui._archive import download_file, unpack_dist_folder
-from tools.update_swagger_ui._constants import SWAGGER_UI_REPO
-from tools.update_swagger_ui._directory import prepare_swagger_ui_directory
-from tools.update_swagger_ui._update_files import update_current_version, update_index_html, update_readme
-from tools.update_swagger_ui._versions import get_current_version, get_latest_version
+from aiohttp_docs._constants import SWAGGER_UI_DIR_PATH
+
+from ._constants import SWAGGER_UI_ARCHIVE_URL_TEMPLATE
+from ._download_archive import download_archive
+from ._get_current_swagger_version import get_current_swagger_version
+from ._get_latest_swagger_version import get_latest_swagger_version
+from ._prepare_swagger_ui_directory import prepare_swagger_ui_directory
+from ._unpack_archive import unpack_archive
+from ._update_index_file import update_index_file
+from ._update_readme_file import update_readme_file
+from ._update_version_file import update_version_file
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,59 +34,63 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 
-def download_and_update_swagger_ui(version: str) -> None:
+async def download_and_update_swagger_ui(current_version: str, new_version: str) -> None:
     """Download and update Swagger UI files to the specified version.
 
     Args:
-        version (str): The version to download
+        current_version (str): The current version of Swagger UI stored in the `aiohttp_docs/swagger` directory
+        new_version (str): The version to update to
 
     Raises:
         ValueError: If download or update fails
     """
+    logger.info('Updating Swagger UI from %s to %s', current_version, new_version)
+
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
-        tar_path = temp_path / f'{version}.tar.gz'
+        tar_path = temp_path / f'{new_version}.tar.gz'
 
         # download archive
-        download_file(
-            url=f'https://github.com/{SWAGGER_UI_REPO}/archive/{version}.tar.gz',
+        await download_archive(
+            url=SWAGGER_UI_ARCHIVE_URL_TEMPLATE.format(version=new_version),
             target_path=tar_path,
         )
 
         # ensure destination folder exists and is empty
-        prepare_swagger_ui_directory(path=SWAGGER_UI_DIR_PATH)
+        prepare_swagger_ui_directory(
+            path=SWAGGER_UI_DIR_PATH,
+        )
 
         # extract archive
-        unpack_dist_folder(
+        unpack_archive(
             tar_path=tar_path,
             target_dir=SWAGGER_UI_DIR_PATH,
         )
 
-        # update index.html and version references
-        update_index_html(SWAGGER_UI_DIR_PATH / 'index.html')
-        update_current_version(version)
-        update_readme(version)
+    # update index.html and version references
+    update_index_file(SWAGGER_UI_DIR_PATH / 'index.html')
+    update_version_file(new_version)
+    update_readme_file(new_version)
 
-    logger.info('Successfully updated Swagger UI to version %s', version)
+    logger.info('Successfully updated Swagger UI to version %s', new_version)
 
 
-def run() -> None:
+async def run() -> None:
     """Compare current and GitHub versions of Swagger UI, update if needed."""
     # Get current and latest versions
-    current_version = get_current_version()
-    logger.info('Current Swagger UI version: %s', current_version)
-
-    latest_version = get_latest_version()
-    logger.info('Latest Swagger UI version: %s', latest_version)
+    current_version = get_current_swagger_version()
+    latest_version = await get_latest_swagger_version()
 
     # Check if update is needed
     if current_version == latest_version:
         logger.info('Swagger UI is already up to date (%s)', latest_version)
         return
 
-    # Download and update if needed
-    logger.info('Updating Swagger UI from %s to %s', current_version, latest_version)
-    download_and_update_swagger_ui(latest_version)
+    # Download and update swagger UI
+    await download_and_update_swagger_ui(
+        current_version=current_version,
+        new_version=latest_version,
+    )
 
 
 def main() -> int:
@@ -90,7 +100,7 @@ def main() -> int:
         int: Exit code (0 for success, 1 for error)
     """
     try:
-        run()
+        asyncio.run(run())
     except Exception:
         logger.exception('Failed to update Swagger UI')
         return 1

@@ -20,6 +20,8 @@ def prepare_swagger_ui_directory(path: Path) -> None:
         logger.exception('Failed to prepare directory %s', path)
         msg = f'Directory preparation failed: {e}'
         raise ValueError(msg) from e
+    else:
+        logger.info('Directory for Swagger UI is ready')
 
 
 def _prepare_swagger_ui_directory(path: Path) -> None:

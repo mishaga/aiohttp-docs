@@ -2,36 +2,10 @@ import logging
 import tarfile
 from pathlib import Path
 
-import requests
-
-from ._constants import REQUEST_TIMEOUT
-
 logger = logging.getLogger()
 
 
-def download_file(url: str, target_path: Path) -> None:
-    """Download a file from a URL to the specified path.
-
-    Args:
-        url (str): The URL to download from
-        target_path (Path): The path to save the file to
-
-    Raises:
-        ValueError: If download fails
-    """
-    logger.info('Downloading archive from %s', url)
-
-    try:
-        _download_file(url, target_path)
-    except (OSError, requests.RequestException) as e:
-        logger.exception('Failed to download %s', url)
-        msg = f'Download failed: {e}'
-        raise ValueError(msg) from e
-
-    logger.info('Downloaded %s to %s', url, target_path)
-
-
-def unpack_dist_folder(tar_path: Path, target_dir: Path) -> None:
+def unpack_archive(tar_path: Path, target_dir: Path) -> None:
     """Unpack a tar file to a directory.
 
     Args:
@@ -44,23 +18,19 @@ def unpack_dist_folder(tar_path: Path, target_dir: Path) -> None:
     Raises:
         ValueError: If extraction fails
     """
-    logger.info('Extracting %s', tar_path)
+    logger.info('Unpacking archive %s', tar_path)
 
     try:
-        _unpack_dist_folder(tar_path, target_dir)
+        _unpack_archive(tar_path, target_dir)
     except (OSError, tarfile.TarError) as e:
         logger.exception('Failed to extract %s', tar_path)
         msg = f'Extraction failed: {e}'
         raise ValueError(msg) from e
+    else:
+        logger.info('Archive unpacked to %s', target_dir)
 
 
-def _download_file(url: str, target_path: Path) -> None:
-    resp = requests.get(url, stream=True, timeout=REQUEST_TIMEOUT)
-    resp.raise_for_status()
-    target_path.write_bytes(resp.content)
-
-
-def _unpack_dist_folder(tar_path: Path, target_dir: Path) -> None:
+def _unpack_archive(tar_path: Path, target_dir: Path) -> None:
     with tarfile.open(tar_path) as tar_file:
         all_members = tar_file.getmembers()
         root_folder = all_members[0]

@@ -10,5 +10,5 @@ Swagger version: <!-- SWAGGER_UI_VERSION_START -->[v5.31.2](https://github.com/s
 
 Update swagger version:
 ```bash
-uv run tools/update_swagger_ui/
+make update-swagger
 ```

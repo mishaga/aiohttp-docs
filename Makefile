@@ -1,4 +1,4 @@
-.PHONY: venv deps lock lint test test-ci test-report pre-commit
+.PHONY: venv deps lock lint test test-ci test-report pre-commit update-swagger
 
 venv:
 	uv venv
@@ -24,3 +24,6 @@ test-report:
 
 pre-commit:
 	pre-commit install
+
+update-swagger:
+	uv run -m tools.update_swagger_ui
