@@ -54,8 +54,8 @@ def main() -> None:
             title='My API',
             version='0.1.0',
         ),
-        spec_uri='/api/openapi.json',  # URL to for OpenAPI Specification
-        swagger_uri='/api/doc',  # URL for Swagger
+        spec_url_path='/api/openapi.json',  # URL to for OpenAPI Specification
+        swagger_url_path='/api/doc',  # URL for Swagger
     )
 
     web.run_app(app)
@@ -136,10 +136,20 @@ if __name__ == '__main__':
 Define Pydantic models for each parameter location and pass them to the decorator.
 
 ```python
+from datetime import date, datetime, UTC
+from decimal import Decimal
+from http import HTTPStatus
+
 from aiohttp import web
 from pydantic import BaseModel, Field
 
 from aiohttp_docs import Info, docs, setup_docs
+
+
+class UserOrdersInfo(BaseModel):
+    user_id: int
+    orders_count: int
+    total_amount: Decimal
 
 
 class PathParams(BaseModel):
@@ -147,24 +157,38 @@ class PathParams(BaseModel):
 
 
 class QueryParams(BaseModel):
-    page: int = 1
-    limit: int = Field(default=20, description='Items per page')
+    date_from: date = Field(
+        alias='from',
+        description='Date from (including)',
+    )
+    date_to: date = Field(
+        alias='to',
+        default=datetime.now(tz=UTC).date(),
+        description='Date to (including)',
+    )
 
 
 @docs(
     tags=['Admin', 'Users', 'Orders'],
     summary='List user orders',
+    response_models={HTTPStatus.OK: UserOrdersInfo},
     path_model=PathParams,
     query_model=QueryParams,
 )
-async def admin_list_user_orders(request: web.Request) -> web.Response:
+async def admin_user_orders_info(request: web.Request) -> web.Response:
     user_id = int(request.match_info['user_id'])
-    return web.json_response({'user_id': user_id, 'orders': []})
+    return web.json_response(
+        {
+            'user_id': user_id,
+            'orders_count': 17,
+            'total_amount': 139.95,
+        }
+    )
 
 
 def main() -> None:
     app = web.Application()
-    app.router.add_post('/admin/user/orders', admin_list_user_orders)
+    app.router.add_get('/admin/user/{user_id}/orders', admin_user_orders_info, allow_head=False)
     setup_docs(app, info=Info(title='My API', version='0.1.0'))
     web.run_app(app)
 
@@ -300,7 +324,7 @@ if __name__ == '__main__':
 
 ## Plans
 
-- Nested models
+- Nested models, root models
 - Move from TypedDict to pydantic models
 - Authorization
 - Automatic validation of the body, response, query, path etc (based on annotations)

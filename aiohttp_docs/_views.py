@@ -3,7 +3,7 @@ from string import Template
 from aiohttp import web
 from aiohttp.typedefs import Handler
 
-from ._constants import ROUTE_NAME_SPEC_VIEW, ROUTE_NAME_STATIC, SWAGGER_UI_DIR_PATH
+from ._constants import ROUTE_NAME_SPEC_VIEW, ROUTE_NAME_SWAGGER_STATIC, SWAGGER_UI_DIR_PATH
 from ._enums import SwaggerLayout
 from ._spec_models import OpenApiSpecification
 
@@ -25,7 +25,7 @@ def get_swagger_view(app: web.Application, layout: SwaggerLayout) -> Handler:
     original_index_content = index_path.read_text()
 
     spec_url = app.router[ROUTE_NAME_SPEC_VIEW].url_for()
-    static_url = app.router[ROUTE_NAME_STATIC].url_for(filename=index_filename)
+    static_url = app.router[ROUTE_NAME_SWAGGER_STATIC].url_for(filename=index_filename)
 
     index_content = Template(original_index_content).substitute(
         path=str(spec_url),
