@@ -103,18 +103,19 @@ def extract_operation(handler: Handler) -> Operation:
 def get_responses(response_models: Responses) -> dict[str, dict]:
     responses = {}
 
-    for status_code, model in response_models.items():
+    for status_code, data in response_models.items():
         if not isinstance(status_code, HTTPStatus):
             status_code = HTTPStatus(status_code)  # noqa: PLW2901
 
-        if (inspect.isclass(model) and issubclass(model, BaseModel)) or model is None:
-            model = Response(model=model)  # noqa: PLW2901
+        response = data
+        if data is None or (inspect.isclass(data) and issubclass(data, BaseModel)):
+            response = Response(model=data)
 
         responses[status_code.value] = {
-            'description': model.get('description', status_code.phrase),
+            'description': response.get('description', status_code.phrase),
             'content': {
                 'application/json': {
-                    'schema': model['model'].model_json_schema() if model['model'] else None,
+                    'schema': response['model'].model_json_schema() if response['model'] else None,
                 },
             },
         }
