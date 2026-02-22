@@ -11,9 +11,9 @@ def setup_docs(  # noqa: PLR0913
     app: web.Application,
     *,
     info: Info,
-    spec_path: str,
-    swagger_path: str,
-    static_path: str = '/static/swagger',
+    spec_uri: str = '/api/openapi.json',
+    swagger_uri: str = '/api/doc',
+    static_uri: str = '/static/swagger',
     layout: SwaggerLayout = SwaggerLayout.BASE,
     enabled: bool = True,
 ) -> None:
@@ -27,18 +27,18 @@ def setup_docs(  # noqa: PLR0913
     )
 
     app.router.add_static(
-        prefix=static_path,
+        prefix=static_uri,
         path=SWAGGER_UI_DIR_PATH,
         name=ROUTE_NAME_STATIC,
     )
     app.router.add_get(
-        path=spec_path,
+        path=spec_uri,
         handler=get_json_spec_view(spec=spec),
         name=ROUTE_NAME_SPEC_VIEW,
         allow_head=False,
     )
     app.router.add_get(
-        path=swagger_path,
+        path=swagger_uri,
         handler=get_swagger_view(app=app, layout=layout),
         name=ROUTE_NAME_SWAGGER_VIEW,
         allow_head=False,

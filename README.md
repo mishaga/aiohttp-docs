@@ -2,14 +2,14 @@
 
 Auto-generate [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.2) specification and
 [Swagger UI](https://swagger.io/tools/swagger-ui/) documentation for
-[aiohttp](https://docs.aiohttp.org/) web servers.
+[aiohttp](https://docs.aiohttp.org/) web servers.  
+Swagger version: <!-- SWAGGER_UI_VERSION_START -->[v5.31.2](https://github.com/swagger-api/swagger-ui/releases/tag/v5.31.2)<!-- SWAGGER_UI_VERSION_END -->
 
 Annotate your route handlers with the `@docs()` decorator and call `setup_docs()` once at startup — the library
 builds the full spec and serves both the JSON endpoint and the interactive Swagger UI.
 
 **Python >= 3.13** is required.
 
-Swagger version: <!-- SWAGGER_UI_VERSION_START -->[v5.31.2](https://github.com/swagger-api/swagger-ui/releases/tag/v5.31.2)<!-- SWAGGER_UI_VERSION_END -->
 
 ## Installation
 
@@ -17,9 +17,12 @@ Swagger version: <!-- SWAGGER_UI_VERSION_START -->[v5.31.2](https://github.com/s
 pip install aiohttp-docs
 ```
 
+
 ## Quick start
 
 ```python
+from http import HTTPStatus
+
 from aiohttp import web
 from pydantic import BaseModel
 
@@ -34,9 +37,9 @@ class UserResponse(BaseModel):
 @docs(
     tags=['Users'],
     summary='Get current user',
-    response_models={200: UserResponse},
+    response_models={HTTPStatus.OK: UserResponse},
 )
-async def users_me(request: web.Request) -> web.Response:
+async def users_me(_: web.Request) -> web.Response:
     """Return the current user."""
     return web.json_response({'id': 1, 'name': 'John'})
 
@@ -51,8 +54,8 @@ def main() -> None:
             title='My API',
             version='0.1.0',
         ),
-        spec_path='/api/openapi.json',  # URL to for OpenAPI Specification
-        swagger_path='/api/doc',  # URL for Swagger
+        spec_uri='/api/openapi.json',  # URL to for OpenAPI Specification
+        swagger_uri='/api/doc',  # URL for Swagger
     )
 
     web.run_app(app)
@@ -64,7 +67,9 @@ if __name__ == '__main__':
 
 After starting the server, open `http://localhost:8080/api/doc` to see the Swagger UI.
 
+
 ## Examples
+
 
 ### Request body and response models
 
@@ -76,9 +81,9 @@ values are Pydantic models or `Response(model=..., description=...)` dicts.
 from http import HTTPStatus
 
 from aiohttp import web
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
-from aiohttp_docs import Response, docs
+from aiohttp_docs import Info, Response, docs, setup_docs
 
 
 class CreateUserRequest(BaseModel):
@@ -106,9 +111,25 @@ class ErrorResponse(BaseModel):
     },
 )
 async def users_create(request: web.Request) -> web.Response:
-    body = CreateUserRequest.model_validate_json(await request.content.read())
+    try:
+        body = CreateUserRequest.model_validate_json(await request.content.read())
+    except ValidationError as e:
+        return web.json_response({'error_message': str(e)}, status=HTTPStatus.BAD_REQUEST)
+
     return web.json_response({'id': 1, 'name': body.name}, status=201)
+
+
+def main() -> None:
+    app = web.Application()
+    app.router.add_post('/users', users_create)
+    setup_docs(app, info=Info(title='My API', version='0.1.0'))
+    web.run_app(app)
+
+
+if __name__ == '__main__':
+    main()
 ```
+
 
 ### Path, query, header, and cookie parameters
 
@@ -118,7 +139,7 @@ Define Pydantic models for each parameter location and pass them to the decorato
 from aiohttp import web
 from pydantic import BaseModel, Field
 
-from aiohttp_docs import docs
+from aiohttp_docs import Info, docs, setup_docs
 
 
 class PathParams(BaseModel):
@@ -131,15 +152,27 @@ class QueryParams(BaseModel):
 
 
 @docs(
-    tags=['Users'],
+    tags=['Admin', 'Users', 'Orders'],
     summary='List user orders',
     path_model=PathParams,
     query_model=QueryParams,
 )
-async def list_orders(request: web.Request) -> web.Response:
+async def admin_list_user_orders(request: web.Request) -> web.Response:
     user_id = int(request.match_info['user_id'])
     return web.json_response({'user_id': user_id, 'orders': []})
+
+
+def main() -> None:
+    app = web.Application()
+    app.router.add_post('/admin/user/orders', admin_list_user_orders)
+    setup_docs(app, info=Info(title='My API', version='0.1.0'))
+    web.run_app(app)
+
+
+if __name__ == '__main__':
+    main()
 ```
+
 
 ### Class-based views
 
@@ -151,7 +184,7 @@ from http import HTTPStatus
 from aiohttp import web
 from pydantic import BaseModel
 
-from aiohttp_docs import Response, docs
+from aiohttp_docs import Info, Response, docs, setup_docs
 
 
 class ItemResponse(BaseModel):
@@ -185,9 +218,17 @@ class ItemView(web.View):
         return web.json_response({'id': 1, 'title': body.title})
 
 
-app = web.Application()
-app.router.add_view('/items/{id}', ItemView)
+def main() -> None:
+    app = web.Application()
+    app.router.add_view('/items/{id}', ItemView)
+    setup_docs(app, info=Info(title='My API', version='0.1.0'))
+    web.run_app(app)
+
+
+if __name__ == '__main__':
+    main()
 ```
+
 
 ### Deprecating endpoints
 
@@ -198,19 +239,36 @@ from warnings import deprecated
 
 from aiohttp import web
 
-from aiohttp_docs import docs
+from aiohttp_docs import Info, docs, setup_docs
 
 
 @docs(tags=['Legacy'], deprecated=True)
-async def old_endpoint(request: web.Request) -> web.Response:
+async def old_endpoint(_: web.Request) -> web.Response:
     return web.json_response({'status': 'old'})
 
 
 @deprecated('Use /v2/resource instead')
 @docs(tags=['Legacy'])
-async def another_old_endpoint(request: web.Request) -> web.Response:
+async def another_old_endpoint(_: web.Request) -> web.Response:
     return web.json_response({'status': 'old'})
+
+
+def main() -> None:
+    app = web.Application()
+    app.add_routes(
+        [
+            web.get('/one', old_endpoint, allow_head=False),
+            web.get('/two', old_endpoint, allow_head=False),
+        ],
+    )
+    setup_docs(app, info=Info(title='My API', version='0.1.0'))
+    web.run_app(app)
+
+
+if __name__ == '__main__':
+    main()
 ```
+
 
 ### Disabling docs in production
 
@@ -228,12 +286,7 @@ def main():
 
     setup_docs(
         app,
-        info=Info(
-            title='My API',
-            version='1.0.0',
-        ),
-        spec_path='/api/openapi.json',
-        swagger_path='/api/doc',
+        info=Info(title='My API', version='1.0.0'),
         enabled=os.getenv('ENVIRONMENT', '') != 'PRODUCTION',
     )
 
@@ -243,3 +296,11 @@ def main():
 if __name__ == '__main__':
     main()
 ```
+
+
+## Plans
+
+- Nested models
+- Move from TypedDict to pydantic models
+- Authorization
+- Automatic validation of the body, response, query, path etc (based on annotations)
