@@ -1,9 +1,9 @@
 [project]
 name = "aiohttp-docs"
-version = "0.0.1"
+version = "0.0.2"
 description = "API documentation for aiohttp server based on Pydantic models"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
@@ -14,8 +14,6 @@ classifiers = [
     "Development Status :: 1 - Planning",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",

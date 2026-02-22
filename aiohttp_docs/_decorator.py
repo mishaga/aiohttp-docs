@@ -3,12 +3,12 @@ from functools import wraps
 from typing import Unpack
 
 from ._constants import DOCS_ATTR_NAME
-from ._types import DocParams
+from ._doc_models import ApiEndpoint
 
 type DecoratedFunc[**P, R] = Callable[P, Awaitable[R]]
 
 
-def docs[**P, R](**doc_params: Unpack[DocParams]) -> Callable[[DecoratedFunc[P, R]], DecoratedFunc[P, R]]:
+def docs[**P, R](**doc_params: Unpack[ApiEndpoint]) -> Callable[[DecoratedFunc[P, R]], DecoratedFunc[P, R]]:
     def decorator(func: DecoratedFunc[P, R]) -> DecoratedFunc[P, R]:
         setattr(func, DOCS_ATTR_NAME, doc_params)
 
