@@ -1,6 +1,6 @@
 # aiohttp-docs
 
-Auto-generate [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.0) specification and
+Auto-generate [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.2) specification and
 [Swagger UI](https://swagger.io/tools/swagger-ui/) documentation for
 [aiohttp](https://docs.aiohttp.org/) web servers.
 
@@ -36,14 +36,14 @@ class UserResponse(BaseModel):
     summary='Get current user',
     response_models={200: UserResponse},
 )
-async def get_user(request: web.Request) -> web.Response:
+async def users_me(request: web.Request) -> web.Response:
     """Return the current user."""
     return web.json_response({'id': 1, 'name': 'John'})
 
 
 def main() -> None:
     app = web.Application()
-    app.router.add_get('/user', get_user, allow_head=False)
+    app.router.add_get('/users/me', users_me, allow_head=False)
 
     setup_docs(
         app,
@@ -105,7 +105,7 @@ class ErrorResponse(BaseModel):
         HTTPStatus.BAD_REQUEST: ErrorResponse,
     },
 )
-async def create_user(request: web.Request) -> web.Response:
+async def users_create(request: web.Request) -> web.Response:
     body = CreateUserRequest.model_validate_json(await request.content.read())
     return web.json_response({'id': 1, 'name': body.name}, status=201)
 ```
