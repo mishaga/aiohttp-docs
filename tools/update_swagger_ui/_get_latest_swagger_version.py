@@ -16,7 +16,7 @@ async def get_latest_swagger_version() -> str:
     """
     try:
         version = await _get_latest_swagger_version()
-    except (json.JSONDecodeError, KeyError) as e:
+    except (aiohttp.ClientResponseError, json.JSONDecodeError, KeyError) as e:
         logger.exception('Failed to fetch latest release')
         msg = f'Could not determine latest version: {e}'
         raise ValueError(msg) from e
@@ -41,7 +41,7 @@ async def _get_latest_swagger_version() -> str:
         aiohttp.ClientSession() as session,
         session.get(url=SWAGGER_UI_LATEST_RELEASE_API_URL, timeout=GITHUB_API_REQUEST_TIMEOUT) as resp,
     ):
-        # ... raise for status
+        resp.raise_for_status()
         latest = await resp.json()
 
     tag: str | None = latest.get('tag_name')

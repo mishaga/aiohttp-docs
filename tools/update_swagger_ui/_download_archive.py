@@ -22,7 +22,7 @@ async def download_archive(url: str, target_path: Path) -> None:
 
     try:
         await _download_archive(url, target_path)
-    except OSError as e:
+    except (OSError, aiohttp.ClientResponseError) as e:
         logger.exception('Failed to download %s', url)
         msg = f'Download failed: {e}'
         raise ValueError(msg) from e
@@ -35,6 +35,5 @@ async def _download_archive(url: str, target_path: Path) -> None:
         aiohttp.ClientSession() as session,
         session.get(url=url, timeout=GITHUB_DOWNLOAD_FILE_TIMEOUT) as resp,
     ):
-        # ... raise for status
-        # ... use trio.Path or anyio.path
+        resp.raise_for_status()
         target_path.write_bytes(await resp.read())  # noqa: ASYNC240
