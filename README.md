@@ -375,5 +375,21 @@ if __name__ == '__main__':
 - Nested models, root models
 - Links in responses
 - Move from TypedDict to pydantic models (because of "termsOfService", and "Parameter.in" for instance)
-- Authorization
+
+Version 1:
+
+- authorization
+- servers
+- webhooks
+- components
+- security
+- tags
+- externalDocs
+
+Version 2:
+
 - Automatic validation of the body, response, query, path etc (based on annotations)
+
+## Documentation
+
+OpenAPI Specification: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.2.md

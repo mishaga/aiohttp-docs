@@ -21,4 +21,4 @@ class ApiEndpoint(TypedDict, total=False):
     header_model: type[BaseModel]
     cookie_model: type[BaseModel]
     body_model: type[BaseModel]
-    response_models: Responses
+    response_models: Required[Responses]

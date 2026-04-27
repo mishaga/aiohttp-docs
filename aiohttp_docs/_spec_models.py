@@ -32,6 +32,18 @@ class Info(TypedDict, total=False):
     version: Required[str]
 
 
+class ServerVariable(TypedDict, total=False):
+    enum: list[str]
+    default: Required[str]
+    description: str
+
+
+class Server(TypedDict, total=False):
+    url: Required[str]
+    description: str
+    variables: dict[str, ServerVariable]
+
+
 class Example(TypedDict, total=False):
     summary: str
     description: str
@@ -75,7 +87,22 @@ class PathItem(TypedDict, total=False):
     trace: Operation
 
 
-class OpenApiSpecification(TypedDict):
-    openapi: str
-    info: Info
-    paths: dict[str, PathItem]
+class Components(TypedDict, total=False):
+    schemas: dict[str, dict]
+    responses: dict[str, dict]
+    parameters: dict[str, dict]
+    examples: dict[str, dict]
+    requestBodies: dict[str, dict]
+    headers: dict[str, dict]
+    securitySchemes: dict[str, dict]
+    links: dict[str, dict]
+    callbacks: dict[str, dict]
+    pathItems: dict[str, dict]
+
+
+class OpenApiSpecification(TypedDict, total=False):
+    openapi: Required[str]
+    info: Required[Info]
+    paths: Required[dict[str, PathItem]]
+    servers: list[Server]
+    components: Components
