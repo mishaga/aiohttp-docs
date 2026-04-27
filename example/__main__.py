@@ -63,7 +63,7 @@ def main() -> None:
 
     app.add_routes(
         [
-            web.get('/user/{user_id}', user_info, allow_head=False),
+            web.get('/user/{id}', user_info, allow_head=False),
         ],
     )
     setup_docs(

@@ -3,7 +3,7 @@
 Auto-generate [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.2) specification and
 [Swagger UI](https://swagger.io/tools/swagger-ui/) documentation for
 [aiohttp](https://docs.aiohttp.org/) web servers.  
-Swagger version: <!-- SWAGGER_UI_VERSION_START -->[v5.31.2](https://github.com/swagger-api/swagger-ui/releases/tag/v5.31.2)<!-- SWAGGER_UI_VERSION_END -->
+Swagger version: <!-- SWAGGER_UI_VERSION_START -->[v5.32.5](https://github.com/swagger-api/swagger-ui/releases/tag/v5.32.5)<!-- SWAGGER_UI_VERSION_END -->
 
 Annotate your route handlers with the `@docs()` decorator and call `setup_docs()` once at startup — the library
 builds the full spec and serves both the JSON endpoint and the interactive Swagger UI.
@@ -55,7 +55,7 @@ def main() -> None:
             version='0.1.0',
         ),
         spec_url_path='/api/openapi.json',  # URL to for OpenAPI Specification
-        swagger_url_path='/api/doc',  # URL for Swagger
+        swagger_url_path='/api/docs',  # URL for Swagger
     )
 
     web.run_app(app)
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     main()
 ```
 
-After starting the server, open `http://localhost:8080/api/doc` to see the Swagger UI.
+After starting the server, open `http://localhost:8080/api/docs` to see the Swagger UI.
 
 
 ## Examples
@@ -355,7 +355,7 @@ def main():
     app = web.Application()
 
     # disable docs for production
-    # `/api/openapi.json`, `/api/doc` and `/static/swagger` will return 404 Not Found
+    # `/api/openapi.json`, `/api/docs` and `/static/swagger` will return 404 Not Found
     setup_docs(
         app,
         info=Info(title='My API', version='0.1.0'),

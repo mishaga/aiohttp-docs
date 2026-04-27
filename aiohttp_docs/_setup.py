@@ -13,7 +13,7 @@ def setup_docs(  # noqa: PLR0913
     info: Info,
     servers: list[Server] | None = None,
     spec_url_path: str = '/api/openapi.json',
-    swagger_url_path: str = '/api/doc',
+    swagger_url_path: str = '/api/docs',
     static_url_path: str = '/static/swagger',
     layout: SwaggerLayout = SwaggerLayout.BASE,
     enabled: bool = True,
