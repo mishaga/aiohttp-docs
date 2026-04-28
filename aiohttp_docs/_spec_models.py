@@ -7,7 +7,7 @@ https://editor-next.swagger.io
 
 from typing import Any, Required, TypedDict
 
-from ._enums import ParameterType
+from ._enums import ParameterType, SecuritySchemeIn, SecuritySchemeType
 
 
 class Licence(TypedDict, total=False):
@@ -69,10 +69,10 @@ Parameter = TypedDict(
 SecurityScheme = TypedDict(
     'SecurityScheme',
     {
-        'type': Required[str],
+        'type': Required[SecuritySchemeType],
         'description': str,
         'name': str,
-        'in': str,
+        'in': SecuritySchemeIn,
         'scheme': str,
         'bearerFormat': str,
         'openIdConnectUrl': str,

@@ -2,7 +2,7 @@
 
 from ._decorator import docs
 from ._doc_models import ApiEndpoint, Response, Responses
-from ._enums import SwaggerLayout
+from ._enums import SecuritySchemeIn, SecuritySchemeType, SwaggerLayout
 from ._setup import setup_docs
 from ._spec_models import (
     Components,
@@ -33,6 +33,8 @@ __all__ = (
     'Responses',
     'SecurityRequirement',
     'SecurityScheme',
+    'SecuritySchemeIn',
+    'SecuritySchemeType',
     'Server',
     'ServerVariable',
     'SwaggerLayout',

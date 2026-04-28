@@ -14,6 +14,8 @@ from aiohttp_docs import (
     Info,
     Response,
     SecurityScheme,
+    SecuritySchemeIn,
+    SecuritySchemeType,
     Server,
     ServerVariable,
     SwaggerLayout,
@@ -345,10 +347,21 @@ def main() -> None:
             ),
         ],
         security_schemes={
-            'BearerAuth': SecurityScheme(type='http', scheme='bearer', bearerFormat='JWT'),
-            'CookieAuth': SecurityScheme(type='apiKey', name='session_id', **{'in': 'cookie'}),
+            'BearerAuth': SecurityScheme(
+                type=SecuritySchemeType.HTTP,
+                scheme='bearer',
+                bearerFormat='JWT',
+            ),
+            'CookieAuth': SecurityScheme(
+                type=SecuritySchemeType.API_KEY,
+                name='session_id',
+                **{'in': SecuritySchemeIn.COOKIE},
+            ),
         },
-        security=[{'BearerAuth': []}, {'CookieAuth': []}],
+        security=[
+            {'BearerAuth': []},
+            {'CookieAuth': []},
+        ],
         layout=SwaggerLayout.BASE,
     )
 
