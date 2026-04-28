@@ -66,6 +66,23 @@ Parameter = TypedDict(
 )
 
 
+SecurityScheme = TypedDict(
+    'SecurityScheme',
+    {
+        'type': Required[str],
+        'description': str,
+        'name': str,
+        'in': str,
+        'scheme': str,
+        'bearerFormat': str,
+        'openIdConnectUrl': str,
+    },
+    total=False,
+)
+
+type SecurityRequirement = dict[str, list[str]]
+
+
 class Operation(TypedDict, total=False):
     tags: list[str]
     summary: str
@@ -94,7 +111,7 @@ class Components(TypedDict, total=False):
     examples: dict[str, dict]
     requestBodies: dict[str, dict]
     headers: dict[str, dict]
-    securitySchemes: dict[str, dict]
+    securitySchemes: dict[str, SecurityScheme]
     links: dict[str, dict]
     callbacks: dict[str, dict]
     pathItems: dict[str, dict]
@@ -106,3 +123,4 @@ class OpenApiSpecification(TypedDict, total=False):
     paths: Required[dict[str, PathItem]]
     servers: list[Server]
     components: Components
+    security: list[SecurityRequirement]

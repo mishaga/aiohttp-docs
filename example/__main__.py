@@ -9,7 +9,17 @@ from warnings import deprecated
 from aiohttp import web
 from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 
-from aiohttp_docs import Example, Info, Response, Server, ServerVariable, SwaggerLayout, docs, setup_docs
+from aiohttp_docs import (
+    Example,
+    Info,
+    Response,
+    SecurityScheme,
+    Server,
+    ServerVariable,
+    SwaggerLayout,
+    docs,
+    setup_docs,
+)
 
 # ---------------------------------------------------------------------------
 # Shared models
@@ -60,6 +70,19 @@ class ErrorResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # 1. GET with path_model + nested response (existing)
 # ---------------------------------------------------------------------------
+
+
+@docs(
+    tags=['Birthdays'],
+    summary='Get birthdays list',
+    response_models={
+        # HTTPStatus.OK: Birthdays,
+        HTTPStatus.OK: Response(),
+    },
+)
+async def birthdays_list(_: web.Request) -> web.Response:
+    """Return birthdays list."""
+    return web.json_response({})
 
 
 @docs(
@@ -289,6 +312,7 @@ def main() -> None:
 
     app.add_routes(
         [
+            web.get('/birthdays', birthdays_list, allow_head=False),
             web.get('/user/{id}', user_info, allow_head=False),
             web.post('/users', create_user),
             web.get('/user/{id}/orders', list_orders, allow_head=False),
@@ -305,21 +329,26 @@ def main() -> None:
         ),
         servers=[
             Server(
-                url='https://api.reminder.plus',
+                url='https://api.website.com',
                 description='Prod API server',
             ),
             Server(
-                url='https://api.ffchat.dev',
+                url='https://api-dev.website.com',
                 description='Dev API server',
                 variables={
-                    'token': ServerVariable(
+                    'var_name': ServerVariable(
                         enum=['one', 'two', 'three'],
-                        default='three',
-                        description='API token',
+                        default='two',
+                        description='A variable for smth.',
                     ),
                 },
             ),
         ],
+        security_schemes={
+            'BearerAuth': SecurityScheme(type='http', scheme='bearer', bearerFormat='JWT'),
+            'CookieAuth': SecurityScheme(type='apiKey', name='session_id', **{'in': 'cookie'}),
+        },
+        security=[{'BearerAuth': []}, {'CookieAuth': []}],
         layout=SwaggerLayout.BASE,
     )
 

@@ -11,7 +11,17 @@ from ._constants import DOCS_ATTR_NAME, OPENAPI_SPEC_VERSION
 from ._doc_models import ApiEndpoint, Response, Responses
 from ._enums import ParameterType
 from ._inner_models import RouteInfo
-from ._spec_models import Components, Info, OpenApiSpecification, Operation, Parameter, PathItem, Server
+from ._spec_models import (
+    Components,
+    Info,
+    OpenApiSpecification,
+    Operation,
+    Parameter,
+    PathItem,
+    SecurityRequirement,
+    SecurityScheme,
+    Server,
+)
 
 
 def rewrite_defs_refs[T](obj: T) -> T:
@@ -68,6 +78,8 @@ def build_openapi_spec(
     *,
     info: Info,
     servers: list[Server] | None = None,
+    security_schemes: dict[str, SecurityScheme] | None = None,
+    security: list[SecurityRequirement] | None = None,
 ) -> OpenApiSpecification:
     """Build OpenAPI 3.1 specification from application routes."""
     paths: dict[str, PathItem] = {}
@@ -88,10 +100,19 @@ def build_openapi_spec(
     if servers:
         spec['servers'] = servers
 
+    components = Components()
+
     if collector.schemas:
-        spec['components'] = Components(
-            schemas=collector.schemas,
-        )
+        components['schemas'] = collector.schemas
+
+    if security_schemes:
+        components['securitySchemes'] = security_schemes
+
+    if components:
+        spec['components'] = components
+
+    if security:
+        spec['security'] = security
 
     return spec
 

@@ -13,6 +13,8 @@ from ._spec_models import (
     Operation,
     Parameter,
     PathItem,
+    SecurityRequirement,
+    SecurityScheme,
     Server,
     ServerVariable,
 )
@@ -29,6 +31,8 @@ __all__ = (
     'PathItem',
     'Response',
     'Responses',
+    'SecurityRequirement',
+    'SecurityScheme',
     'Server',
     'ServerVariable',
     'SwaggerLayout',

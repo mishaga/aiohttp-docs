@@ -378,12 +378,12 @@ if __name__ == '__main__':
 
 Version 1:
 
-- authorization
-- servers
-- webhooks
-- components
-- security
+- authorization: done, but need to be checked and tested
+- servers: done, but need to be checked and tested
+- security: done, but need to be checked and tested
+- components: done (probably partially), need to be checked and tested
 - tags
+- webhooks
 - externalDocs
 
 Version 2:
