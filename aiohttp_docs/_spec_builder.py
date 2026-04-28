@@ -14,7 +14,7 @@ from ._inner_models import RouteInfo
 from ._spec_models import Components, Info, OpenApiSpecification, Operation, Parameter, PathItem, Server
 
 
-def rewrite_defs_refs(obj: object) -> object:
+def rewrite_defs_refs[T](obj: T) -> T:
     """Recursively rewrite $ref paths from #/$defs/ to #/components/schemas/."""
     if isinstance(obj, dict):
         return {
@@ -35,7 +35,6 @@ class SchemaCollector:
 
     def __init__(self) -> None:
         self.schemas: dict[str, dict] = {}
-        self.parameters: dict[str, dict] = {}
 
     def add_schema_model(self, model_class: type[BaseModel]) -> dict:
         """Add a model to components/schemas and return a $ref dict."""
@@ -97,7 +96,10 @@ def build_openapi_spec(
     return spec
 
 
-def extract_route_info(route: AbstractRoute, collector: SchemaCollector) -> Generator[RouteInfo]:
+def extract_route_info(
+    route: AbstractRoute,
+    collector: SchemaCollector,
+) -> Generator[RouteInfo]:
     if inspect.isfunction(route.handler) and hasattr(route.handler, DOCS_ATTR_NAME):
         method = HTTPMethod(route.method)
         path = route.resource.canonical
@@ -122,7 +124,10 @@ def extract_route_info(route: AbstractRoute, collector: SchemaCollector) -> Gene
                 )
 
 
-def extract_operation(handler: Handler, collector: SchemaCollector) -> Operation:
+def extract_operation(
+    handler: Handler,
+    collector: SchemaCollector,
+) -> Operation:
     """Extract OpenAPI path information from a documented route."""
     docs_data: ApiEndpoint = getattr(handler, DOCS_ATTR_NAME)
     parameters = get_parameters(docs_data=docs_data, collector=collector)
@@ -157,7 +162,7 @@ def extract_operation(handler: Handler, collector: SchemaCollector) -> Operation
             collector=collector,
         )
 
-    if docs_data.get('response_models'):
+    if docs_data['response_models']:
         operation['responses'] = get_responses(docs_data['response_models'], collector)
 
     return operation

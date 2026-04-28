@@ -9,7 +9,7 @@ from warnings import deprecated
 from aiohttp import web
 from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 
-from aiohttp_docs import Example, Info, Response, Server, SwaggerLayout, docs, setup_docs
+from aiohttp_docs import Example, Info, Response, Server, ServerVariable, SwaggerLayout, docs, setup_docs
 
 # ---------------------------------------------------------------------------
 # Shared models
@@ -311,6 +311,13 @@ def main() -> None:
             Server(
                 url='https://api.ffchat.dev',
                 description='Dev API server',
+                variables={
+                    'token': ServerVariable(
+                        enum=['one', 'two', 'three'],
+                        default='three',
+                        description='API token',
+                    ),
+                },
             ),
         ],
         layout=SwaggerLayout.BASE,

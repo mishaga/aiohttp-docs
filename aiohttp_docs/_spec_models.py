@@ -34,7 +34,7 @@ class Info(TypedDict, total=False):
 
 class ServerVariable(TypedDict, total=False):
     enum: list[str]
-    default: Required[str]
+    default: str
     description: str
 
 
