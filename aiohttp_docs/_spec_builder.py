@@ -174,21 +174,21 @@ def get_responses(
             status_code = HTTPStatus(status_code)  # noqa: PLW2901
 
         response = data
-        if data is None or (inspect.isclass(data) and issubclass(data, BaseModel)):
+        if inspect.isclass(data) and issubclass(data, BaseModel):
             response = Response(model=data)
 
-        schema = None
-        if response['model']:
-            schema = collector.add_schema_model(response['model'])
-
-        responses[status_code.value] = {
+        response_object: dict = {
             'description': response.get('description', status_code.phrase),
-            'content': {
-                'application/json': {
-                    'schema': schema,
-                },
-            },
         }
+
+        if 'model' in response:
+            response_object['content'] = {
+                'application/json': {
+                    'schema': collector.add_schema_model(response['model']),
+                },
+            }
+
+        responses[status_code.value] = response_object
 
     return responses
 

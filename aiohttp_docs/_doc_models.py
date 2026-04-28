@@ -3,11 +3,11 @@ from typing import Required, TypedDict
 
 from pydantic import BaseModel
 
-type Responses = dict[HTTPStatus | int, Response | type[BaseModel] | None]
+type Responses = dict[HTTPStatus | int, Response | type[BaseModel]]
 
 
 class Response(TypedDict, total=False):
-    model: Required[type[BaseModel] | None]
+    model: type[BaseModel]
     description: str
 
 
