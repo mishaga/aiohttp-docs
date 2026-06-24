@@ -1,230 +1,371 @@
 """Example."""
 
-import logging
+from datetime import UTC, date, datetime
+from decimal import Decimal
+from enum import StrEnum
 from http import HTTPStatus
-from typing import Literal
 from warnings import deprecated
 
 from aiohttp import web
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 
-from aiohttp_docs import Example, Info, Response, docs, setup_docs
+from aiohttp_docs import (
+    Example,
+    Info,
+    Response,
+    SecurityScheme,
+    SecuritySchemeIn,
+    SecuritySchemeType,
+    Server,
+    ServerVariable,
+    SwaggerLayout,
+    docs,
+    setup_docs,
+)
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('example')
+# ---------------------------------------------------------------------------
+# Shared models
+# ---------------------------------------------------------------------------
 
 
-class PathResponse(BaseModel):
-    """Path response model."""
+class PathUser(BaseModel):
+    """Path User model."""
 
-    okay: Literal[True] = True
-    path: str
-    method: str
-    fake: Literal['yes', 'no'] = 'no'
-    param: str | None = None
+    id: PositiveInt
 
 
-class PathModel(BaseModel):
-    """Path parameters model."""
+class OrderStatus(StrEnum):
+    """Order status enum."""
 
+    CREATED = 'created'
+    PAID = 'paid'
+    SENT = 'sent'
+    DELIVERED = 'delivered'
+
+
+class Order(BaseModel):
+    """Order model."""
+
+    id: PositiveInt
+    created_at: datetime
+    amount: PositiveFloat
+    status: OrderStatus
+    items_count: PositiveInt
+
+
+class User(BaseModel):
+    """User model."""
+
+    id: PositiveInt
     first_name: str
     last_name: str
-
-
-class QueryModel(BaseModel):
-    """Query model."""
-
-    page: int
-    limit: int = 100
-
-
-class HeaderModel(BaseModel):
-    """Headers model."""
-
-    content_type: str = Field(
-        default='application/xml',
-        description='Okay, this is a CT description',
-        alias='Content-Type',
-    )
-    x_accept: str | None = Field(
-        default=None,
-        deprecated='This header is deprecated',
-        examples=[
-            Example(summary='Summary', value='*/1'),
-            Example(description='Description', value='*/2'),
-            Example(summary='all', description='Accept all', value='*/*'),
-            Example(summary='xml', description='Accept XML only', value='application/xml'),
-            Example(summary='text', description='Accept text only', externalValue='/'),
-            Example(description='last one'),
-        ],
-        alias='X-Accept',
-    )
-    x_ip: str = Field(serialization_alias='X-IP')
-
-
-class CookieModel(BaseModel):
-    """Cookie model."""
-
-    first_name: str
-    last_name: str
-
-
-class BodyModel(BaseModel):
-    """Post request model."""
-
-    name: str
-    age: int
-    is_male: bool = False
-    height: float
-    weight: float
+    is_active: bool
+    orders: list[Order]
 
 
 class ErrorResponse(BaseModel):
     """Error response model."""
 
-    okay: Literal[False] = False
     error_message: str
 
 
-async def terms_view(_: web.Request) -> web.Response:
-    """Terms of service page."""
-    return web.Response(text='My terms of service')
+# ---------------------------------------------------------------------------
+# 1. GET with path_model + nested response (existing)
+# ---------------------------------------------------------------------------
 
 
 @docs(
-    tags=['Index'],
+    tags=['Birthdays'],
+    summary='Get birthdays list',
     response_models={
-        HTTPStatus.OK: Response(model=PathResponse),
-        HTTPStatus.CREATED: PathResponse,
-        400: Response(model=ErrorResponse),
-        401: ErrorResponse,
+        # HTTPStatus.OK: Birthdays,
+        HTTPStatus.OK: Response(),
     },
 )
-async def index_page(request: web.Request) -> web.Response:
-    """My fancy function.
+async def birthdays_list(_: web.Request) -> web.Response:
+    """Return birthdays list."""
+    return web.json_response({})
 
-    Lorem ipsum dolor sit amet consectetur adipiscing elit. Placerat in id cursus mi pretium tellus duis.
-    Urna tempor pulvinar vivamus fringilla lacus nec metus. Integer nunc posuere ut hendrerit semper vel class.
-    Conubia nostra inceptos himenaeos orci varius natoque penatibus. Mus donec rhoncus eros lobortis
-    nulla molestie mattis. Purus est efficitur laoreet mauris pharetra vestibulum fusce.
 
-    ```python
-    import requests
+@docs(
+    tags=['Users'],
+    summary='Get user by ID',
+    path_model=PathUser,
+    response_models={
+        HTTPStatus.OK: User,
+    },
+)
+async def user_info(_: web.Request) -> web.Response:
+    """Return user details including their orders."""
+    return web.json_response({})
 
-    res = requests.get('https://mishaga.com/)
-    print(res.status)
-    print(res.text)
-    ```
 
-    Here is the list:
-    - Okay
-    - Not Okay
-    - Absolutely *not* **okay**
-    """
-    resp = PathResponse(
-        path=request.path,
-        method=request.method,
+# ---------------------------------------------------------------------------
+# 2. POST with body_model + multiple response statuses
+# ---------------------------------------------------------------------------
+
+
+class CreateUserRequest(BaseModel):
+    """Create user request body."""
+
+    first_name: str
+    last_name: str
+    email: str
+    age: int = Field(ge=18)
+
+
+class CreateUserResponse(BaseModel):
+    """Created user response."""
+
+    id: PositiveInt
+    first_name: str
+    last_name: str
+
+
+@docs(
+    tags=['Users'],
+    summary='Create a new user',
+    body_model=CreateUserRequest,
+    response_models={
+        HTTPStatus.CREATED: Response(model=CreateUserResponse, description='User successfully created'),
+        HTTPStatus.BAD_REQUEST: Response(model=ErrorResponse, description='Validation failed'),
+        HTTPStatus.CONFLICT: Response(model=ErrorResponse, description='User with this email already exists'),
+    },
+)
+async def create_user(_: web.Request) -> web.Response:
+    """Create a new user account."""
+    return web.json_response({}, status=HTTPStatus.CREATED)
+
+
+# ---------------------------------------------------------------------------
+# 3. GET with query_model (aliases + examples) and header_model
+# ---------------------------------------------------------------------------
+
+
+class OrdersQuery(BaseModel):
+    """Query parameters for listing orders."""
+
+    date_from: date = Field(
+        alias='from',
+        default_factory=lambda: datetime.now(tz=UTC).date(),
+        description='Start date (inclusive)',
+        examples=[
+            Example(value='2024-01-01', summary='Start of 2024'),
+            Example(value='2025-06-15'),
+        ],
     )
-    return web.json_response(resp.model_dump())
+    date_to: date = Field(
+        alias='to',
+        default_factory=lambda: datetime.now(tz=UTC).date(),
+        description='End date (inclusive)',
+    )
+    status: OrderStatus | None = Field(default=None, description='Filter by order status')
+    min_amount: Decimal | None = Field(default=None, description='Minimum order amount', ge=0)
+
+
+class AuthHeader(BaseModel):
+    """Header parameters for authenticated endpoints."""
+
+    x_api_key: str = Field(alias='X-Api-Key', description='API key for authentication')
+    x_request_id: str | None = Field(default=None, alias='X-Request-Id', description='Optional request tracing ID')
+
+
+class OrderListResponse(BaseModel):
+    """Paginated order list response."""
+
+    items: list[Order]
+    total: int
 
 
 @docs(
-    tags=['Index'],
+    tags=['Orders'],
+    summary='List orders',
+    description='Retrieve orders filtered by date range, status, and minimum amount.',
+    path_model=PathUser,
+    query_model=OrdersQuery,
+    header_model=AuthHeader,
     response_models={
-        HTTPStatus.OK: Response(model=PathResponse),
-        HTTPStatus.NOT_FOUND: Response(model=ErrorResponse, description='Description of the error response'),
+        HTTPStatus.OK: OrderListResponse,
+        HTTPStatus.UNAUTHORIZED: Response(model=ErrorResponse, description='Invalid or missing API key'),
     },
-    summary='This is the summary of the API method',
-    description=(
-        'This is the description of the API method. '
-        'The docstring of the function will be used as description if you omit this parameter.'
-    ),
-    path_model=PathModel,
-    query_model=QueryModel,
-    header_model=HeaderModel,
-    cookie_model=CookieModel,
 )
-async def with_param(request: web.Request) -> web.Response:
-    """With param function."""
-    name = request.match_info['name']
-    return web.Response(text=f'name: {name}')
+async def list_orders(_: web.Request) -> web.Response:
+    """List orders for a user."""
+    return web.json_response({})
 
 
-class ClassPage(web.View):
-    """Class page view."""
+# ---------------------------------------------------------------------------
+# 4. Class-based view (GET / PUT / DELETE)
+# ---------------------------------------------------------------------------
+
+
+class PathItem(BaseModel):
+    """Path parameters for item endpoints."""
+
+    item_id: PositiveInt
+
+
+class ItemResponse(BaseModel):
+    """Item response model."""
+
+    id: PositiveInt
+    title: str
+    price: Decimal
+    in_stock: bool
+
+
+class UpdateItemRequest(BaseModel):
+    """Update item request body."""
+
+    title: str | None = None
+    price: Decimal | None = Field(default=None, gt=0)
+    in_stock: bool | None = None
+
+
+class ItemView(web.View):
+    """CRUD view for items."""
 
     @docs(
-        tags=['Index'],
+        tags=['Items'],
+        summary='Get item by ID',
+        path_model=PathItem,
         response_models={
-            HTTPStatus.OK: Response(model=PathResponse),
-            HTTPStatus.BAD_REQUEST: Response(model=ErrorResponse),
+            HTTPStatus.OK: ItemResponse,
+            HTTPStatus.NOT_FOUND: Response(model=ErrorResponse, description='Item not found'),
         },
-        description='My fancy description',
     )
-    @deprecated('ddd')
     async def get(self) -> web.Response:
-        """Class GET method."""
-        resp = PathResponse(
-            path=self.request.path,
-            method=self.request.method,
-        )
-        return web.json_response(resp.model_dump())
+        """Retrieve a single item."""
+        return web.json_response({})
 
     @docs(
-        tags=['Index'],
+        tags=['Items'],
+        summary='Update item',
+        path_model=PathItem,
+        body_model=UpdateItemRequest,
         response_models={
-            HTTPStatus.OK: Response(
-                model=PathResponse,
-                description='Info about...',
-            ),
-            400: Response(
-                model=ErrorResponse,
-                description='Well... not really good',
-            ),
-            401: ErrorResponse,
-            402: ErrorResponse,
-            403: ErrorResponse,
+            HTTPStatus.OK: Response(model=ItemResponse, description='Item updated'),
+            HTTPStatus.NOT_FOUND: ErrorResponse,
         },
-        summary='Well well well...',
-        deprecated=True,
-        body_model=PathModel,
     )
-    async def post(self) -> web.Response:
-        """Class POST method."""
-        body = PathModel.model_validate_json(await self.request.content.read())
-        resp = PathResponse(
-            path=self.request.path,
-            method=self.request.method,
-            param=str(body),
-        )
-        return web.json_response(resp.model_dump())
+    async def put(self) -> web.Response:
+        """Update an existing item."""
+        return web.json_response({})
+
+    @docs(
+        tags=['Items'],
+        summary='Delete item',
+        path_model=PathItem,
+        response_models={
+            HTTPStatus.NO_CONTENT: Response(description='Item deleted'),
+            HTTPStatus.NOT_FOUND: ErrorResponse,
+        },
+    )
+    async def delete(self) -> web.Response:
+        """Delete an item."""
+        return web.json_response(status=HTTPStatus.NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# 5. Deprecated endpoints (both styles)
+# ---------------------------------------------------------------------------
+
+
+class LegacyUsersResponse(BaseModel):
+    """Legacy response with flat user list."""
+
+    users: list[str]
+
+
+@docs(
+    tags=['Legacy'],
+    summary='List users (old)',
+    deprecated=True,
+    response_models={
+        HTTPStatus.OK: LegacyUsersResponse,
+    },
+)
+async def legacy_list_users(_: web.Request) -> web.Response:
+    """Old user listing endpoint — use GET /users instead."""
+    return web.json_response({})
+
+
+@deprecated('Use GET /user/{id}/orders instead')
+@docs(
+    tags=['Legacy'],
+    summary='Get user orders (old)',
+    response_models={
+        HTTPStatus.OK: OrderListResponse,
+    },
+)
+async def legacy_user_orders(_: web.Request) -> web.Response:
+    """Old user orders endpoint."""
+    return web.json_response({})
+
+
+# ---------------------------------------------------------------------------
+# App setup
+# ---------------------------------------------------------------------------
 
 
 def main() -> None:
-    """Main."""
+    """Main function."""
     app = web.Application()
+
     app.add_routes(
         [
-            web.get('/', index_page, allow_head=False),
-            web.get('/with-param/{name}', with_param, allow_head=False),
-            web.view('/cls', ClassPage),
-            web.get('/terms', terms_view, allow_head=False),
+            web.get('/birthdays', birthdays_list, allow_head=False),
+            web.get('/user/{id}', user_info, allow_head=False),
+            web.post('/users', create_user),
+            web.get('/user/{id}/orders', list_orders, allow_head=False),
+            web.view('/items/{item_id}', ItemView),
+            web.get('/legacy/users', legacy_list_users, allow_head=False),
+            web.get('/legacy/orders', legacy_user_orders, allow_head=False),
         ],
     )
     setup_docs(
-        app,
+        app=app,
         info=Info(
-            title='Test API of mine',
-            version='1.2.0',
-            summary='My fancy Summary',
-            description='My incredible `Description`',
-            termsOfService='/terms',
+            title='Example API',
+            version='0.1.0',
         ),
-        spec_url_path='/api/openapi.json',
-        swagger_url_path='/api/doc',
-        static_url_path='/api/swagger-ui/static-files',
+        servers=[
+            Server(
+                url='https://api.website.com',
+                description='Prod API server',
+            ),
+            Server(
+                url='https://api-dev.website.com',
+                description='Dev API server',
+                variables={
+                    'var_name': ServerVariable(
+                        enum=['one', 'two', 'three'],
+                        default='two',
+                        description='A variable for smth.',
+                    ),
+                },
+            ),
+        ],
+        security_schemes={
+            'BearerAuth': SecurityScheme(
+                type=SecuritySchemeType.HTTP,
+                scheme='bearer',
+                bearerFormat='JWT',
+            ),
+            'CookieAuth': SecurityScheme(
+                type=SecuritySchemeType.API_KEY,
+                name='session_id',
+                **{'in': SecuritySchemeIn.COOKIE},
+            ),
+        },
+        security=[
+            {'BearerAuth': []},
+            {'CookieAuth': []},
+        ],
+        layout=SwaggerLayout.BASE,
     )
-    web.run_app(app=app)
+
+    web.run_app(app)
 
 
 if __name__ == '__main__':

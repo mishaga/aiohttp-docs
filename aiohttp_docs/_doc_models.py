@@ -3,11 +3,11 @@ from typing import Required, TypedDict
 
 from pydantic import BaseModel
 
-type Responses = dict[HTTPStatus | int, Response | type[BaseModel] | None]
+type Responses = dict[HTTPStatus | int, Response | type[BaseModel]]
 
 
 class Response(TypedDict, total=False):
-    model: Required[type[BaseModel] | None]
+    model: type[BaseModel]
     description: str
 
 
@@ -21,4 +21,4 @@ class ApiEndpoint(TypedDict, total=False):
     header_model: type[BaseModel]
     cookie_model: type[BaseModel]
     body_model: type[BaseModel]
-    response_models: Responses
+    response_models: Required[Responses]
